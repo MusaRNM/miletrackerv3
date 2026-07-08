@@ -33,10 +33,17 @@ const CLIENT_DIR = path.join(ROOT, "dist", "client");
 const SERVER_DIR = path.join(ROOT, "dist", "server");
 const PORT = 8791;
 
+// On Windows, Node's spawn (without shell:true) can't resolve shim scripts
+// like `npx` — it needs the actual `npx.cmd`. On POSIX, `npx` is the real
+// executable. Resolve once, cross-platform, without using shell:true.
+const IS_WINDOWS = process.platform === "win32";
+const NPX = IS_WINDOWS ? "npx.cmd" : "npx";
+
 function run(cmd, args, opts = {}) {
   return new Promise((resolve, reject) => {
     const p = spawn(cmd, args, { stdio: "inherit", shell: false, ...opts });
     p.on("exit", (code) => (code === 0 ? resolve() : reject(new Error(`${cmd} exited ${code}`))));
+    p.on("error", reject);
   });
 }
 
@@ -54,7 +61,7 @@ async function waitForOk(url, timeoutMs = 40_000) {
 
 async function main() {
   console.log("→ vite build");
-  await run("npx", ["vite", "build"]);
+  await run(NPX, ["vite", "build"]);
 
   if (!existsSync(SERVER_DIR)) throw new Error("dist/server missing after build");
 
@@ -64,7 +71,7 @@ async function main() {
 
   console.log("→ booting wrangler to snapshot SSR shell");
   const wr = spawn(
-    "npx",
+    NPX,
     ["wrangler", "--cwd", SERVER_DIR, "dev", "--port", String(PORT), "--local"],
     { stdio: ["ignore", "pipe", "pipe"] },
   );
