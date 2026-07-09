@@ -252,6 +252,41 @@ function SettingsPage() {
 
       <CloudSyncCard />
 
+      <section>
+        <h2 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Odometer
+        </h2>
+        <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
+          <div className="space-y-3 px-4 py-4">
+            <div className="flex items-start gap-3">
+              <Gauge className="mt-0.5 size-4 text-muted-foreground" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium">Current odometer</p>
+                <p className="text-xs text-muted-foreground">
+                  {s.odometerBaselineAt > 0
+                    ? "Auto-updated from tracked trips. We'll check in monthly."
+                    : "Enter your vehicle's current odometer to start tracking it here."}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                inputMode="decimal"
+                step="0.1"
+                value={odoInput}
+                onChange={(e) => setOdoInput(e.target.value)}
+                className="flex-1"
+              />
+              <span className="text-sm text-muted-foreground">{unitLabel(s.distanceUnit)}</span>
+              <Button size="sm" onClick={saveOdometer}>
+                {s.odometerBaselineAt > 0 ? "Update" : "Set"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+
 
 
       <section>
