@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Ruler, Radar, Timer, Bell, DollarSign, Palette, Download, Upload, Trash2, Gauge, MapPin } from "lucide-react";
 import { CloudSyncCard } from "@/components/CloudSyncCard";
@@ -30,6 +30,9 @@ import { useSettings } from "@/lib/settings";
 import { useTracker } from "@/lib/tracker";
 import { exportBackup, importBackup, clearAllData, validateBackup } from "@/lib/db";
 import type { DistanceUnit } from "@/lib/types";
+import { useTrips } from "@/lib/hooks";
+import { currentOdometerMeters } from "@/lib/odometer";
+import { metersToUnit, unitLabel } from "@/lib/geo";
 import { format } from "date-fns";
 
 export const Route = createFileRoute("/settings")({
@@ -72,6 +75,33 @@ function SettingsPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const enableWatch = useTracker((st) => st.enableWatch);
   const disableWatch = useTracker((st) => st.disableWatch);
+  const trips = useTrips() ?? [];
+  const METERS_PER_UNIT = s.distanceUnit === "mi" ? 1609.344 : 1000;
+  const currentMeters = currentOdometerMeters(
+    trips,
+    s.odometerBaselineMeters,
+    s.odometerBaselineAt,
+  );
+  const [odoInput, setOdoInput] = useState("");
+  useEffect(() => {
+    setOdoInput(metersToUnit(currentMeters, s.distanceUnit).toFixed(1));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [s.odometerBaselineMeters, s.odometerBaselineAt, s.distanceUnit, trips.length]);
+
+  function saveOdometer() {
+    const n = parseFloat(odoInput);
+    if (!isFinite(n) || n < 0) {
+      toast.error("Enter a valid odometer reading");
+      return;
+    }
+    const now = Date.now();
+    s.update({
+      odometerBaselineMeters: n * METERS_PER_UNIT,
+      odometerBaselineAt: now,
+      odometerLastPromptAt: now,
+    });
+    toast.success("Odometer updated");
+  }
 
   async function doExport() {
     const data = await exportBackup();
@@ -221,6 +251,41 @@ function SettingsPage() {
       </section>
 
       <CloudSyncCard />
+
+      <section>
+        <h2 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Odometer
+        </h2>
+        <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
+          <div className="space-y-3 px-4 py-4">
+            <div className="flex items-start gap-3">
+              <Gauge className="mt-0.5 size-4 text-muted-foreground" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium">Current odometer</p>
+                <p className="text-xs text-muted-foreground">
+                  {s.odometerBaselineAt > 0
+                    ? "Auto-updated from tracked trips. We'll check in monthly."
+                    : "Enter your vehicle's current odometer to start tracking it here."}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                inputMode="decimal"
+                step="0.1"
+                value={odoInput}
+                onChange={(e) => setOdoInput(e.target.value)}
+                className="flex-1"
+              />
+              <span className="text-sm text-muted-foreground">{unitLabel(s.distanceUnit)}</span>
+              <Button size="sm" onClick={saveOdometer}>
+                {s.odometerBaselineAt > 0 ? "Update" : "Set"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
 
 
 

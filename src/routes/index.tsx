@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Play,
   MapPin,
@@ -16,6 +16,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatCard } from "@/components/StatCard";
 import { MileageBarChart } from "@/components/MileageChart";
 import { ManualTripDialog } from "@/components/ManualTripDialog";
+import { OdometerCheckDialog } from "@/components/OdometerCheckDialog";
 import { useTrips, useFuel } from "@/lib/hooks";
 import { useTracker } from "@/lib/tracker";
 import { useSettings } from "@/lib/settings";
@@ -29,6 +30,7 @@ import {
   type RangeKey,
 } from "@/lib/reports";
 import { metersToUnit, unitLabel, formatHours } from "@/lib/geo";
+import { currentOdometerMeters, shouldPromptOdometerCheck } from "@/lib/odometer";
 
 export const Route = createFileRoute("/")({
   component: Dashboard,
@@ -47,8 +49,12 @@ function Dashboard() {
   const unit = useSettings((s) => s.distanceUnit);
   const irsRate = useSettings((s) => s.irsRatePerMile);
   const autoDetect = useSettings((s) => s.autoDetect);
+  const odoBaselineMeters = useSettings((s) => s.odometerBaselineMeters);
+  const odoBaselineAt = useSettings((s) => s.odometerBaselineAt);
+  const odoLastPromptAt = useSettings((s) => s.odometerLastPromptAt);
   const [range, setRange] = useState<RangeKey>("today");
   const [manualOpen, setManualOpen] = useState(false);
+  const [odoCheckOpen, setOdoCheckOpen] = useState(false);
 
   const permission = useTracker((s) => s.permission);
   const requestPermission = useTracker((s) => s.requestPermission);
@@ -68,6 +74,23 @@ function Dashboard() {
     range === "year"
       ? monthlySeries(t, dr, unit)
       : dailySeries(t, getRange(range === "today" ? "week" : range), unit);
+
+  const odometerMeters = useMemo(
+    () => currentOdometerMeters(t, odoBaselineMeters, odoBaselineAt),
+    [t, odoBaselineMeters, odoBaselineAt],
+  );
+
+  useEffect(() => {
+    if (
+      shouldPromptOdometerCheck({
+        baselineMeters: odoBaselineMeters,
+        baselineAt: odoBaselineAt,
+        lastPromptAt: odoLastPromptAt,
+      })
+    ) {
+      setOdoCheckOpen(true);
+    }
+  }, [odoBaselineMeters, odoBaselineAt, odoLastPromptAt]);
 
   async function handleEnable() {
     const res = await requestPermission();
@@ -176,6 +199,16 @@ function Dashboard() {
         />
       </div>
 
+      {odoBaselineAt > 0 && (
+        <StatCard
+          label="Odometer"
+          accent="primary"
+          icon={<Gauge className="size-4" />}
+          value={metersToUnit(odometerMeters, unit).toFixed(1)}
+          sub={unitLabel(unit)}
+        />
+      )}
+
       {/* Chart */}
       <div className="rounded-2xl border bg-card p-4 shadow-sm">
         <div className="mb-3 flex items-center justify-between">
@@ -210,6 +243,11 @@ function Dashboard() {
       </div>
 
       <ManualTripDialog open={manualOpen} onOpenChange={setManualOpen} />
+      <OdometerCheckDialog
+        open={odoCheckOpen}
+        onOpenChange={setOdoCheckOpen}
+        estimatedMeters={odometerMeters}
+      />
     </div>
   );
 }
