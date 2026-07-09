@@ -75,6 +75,33 @@ function SettingsPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const enableWatch = useTracker((st) => st.enableWatch);
   const disableWatch = useTracker((st) => st.disableWatch);
+  const trips = useTrips() ?? [];
+  const METERS_PER_UNIT = s.distanceUnit === "mi" ? 1609.344 : 1000;
+  const currentMeters = currentOdometerMeters(
+    trips,
+    s.odometerBaselineMeters,
+    s.odometerBaselineAt,
+  );
+  const [odoInput, setOdoInput] = useState("");
+  useEffect(() => {
+    setOdoInput(metersToUnit(currentMeters, s.distanceUnit).toFixed(1));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [s.odometerBaselineMeters, s.odometerBaselineAt, s.distanceUnit, trips.length]);
+
+  function saveOdometer() {
+    const n = parseFloat(odoInput);
+    if (!isFinite(n) || n < 0) {
+      toast.error("Enter a valid odometer reading");
+      return;
+    }
+    const now = Date.now();
+    s.update({
+      odometerBaselineMeters: n * METERS_PER_UNIT,
+      odometerBaselineAt: now,
+      odometerLastPromptAt: now,
+    });
+    toast.success("Odometer updated");
+  }
 
   async function doExport() {
     const data = await exportBackup();
