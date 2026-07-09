@@ -78,6 +78,14 @@ export interface AppSettings {
   reverseGeocodeEnabled: boolean;
   /** Opt-in cloud sync (requires sign-in and a passphrase). */
   cloudSyncEnabled: boolean;
+  /** Odometer baseline in meters. Current odometer = baseline + distance of
+   *  trips recorded on/after odometerBaselineAt. */
+  odometerBaselineMeters: number;
+  /** Epoch ms when the baseline was last set/confirmed. Trips at/after this
+   *  timestamp count toward the current odometer. */
+  odometerBaselineAt: number;
+  /** Epoch ms of the last monthly "is this correct?" prompt. */
+  odometerLastPromptAt: number;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -90,4 +98,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   theme: "system",
   reverseGeocodeEnabled: false,
   cloudSyncEnabled: false,
+  odometerBaselineMeters: 0,
+  odometerBaselineAt: 0,
+  odometerLastPromptAt: 0,
 };
