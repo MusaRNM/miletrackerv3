@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Ruler, Radar, Timer, Bell, DollarSign, Palette, Download, Upload, Trash2, Gauge, MapPin } from "lucide-react";
 import { CloudSyncCard } from "@/components/CloudSyncCard";
@@ -30,6 +30,9 @@ import { useSettings } from "@/lib/settings";
 import { useTracker } from "@/lib/tracker";
 import { exportBackup, importBackup, clearAllData, validateBackup } from "@/lib/db";
 import type { DistanceUnit } from "@/lib/types";
+import { useTrips } from "@/lib/hooks";
+import { currentOdometerMeters } from "@/lib/odometer";
+import { metersToUnit, unitLabel } from "@/lib/geo";
 import { format } from "date-fns";
 
 export const Route = createFileRoute("/settings")({
